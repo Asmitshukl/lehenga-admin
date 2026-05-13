@@ -1,0 +1,408 @@
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
+
+import { adminRequest } from "../_lib/admin-api";
+import { buildImagePayload } from "../_lib/image-upload";
+import { CatalogCard } from "./catalog-card";
+import { MockImageDropzone, type MockUploadImage } from "./mock-image-dropzone";
+
+type CollectionOption = {
+  id: string;
+  name: string;
+};
+
+type LehengaItem = {
+  id: string;
+  name: string;
+  sku: string;
+  status: string;
+  shortDescription?: string | null;
+  description?: string | null;
+  collection?: { id: string; name: string; slug: string } | null;
+  rentalPricePerDay: string;
+  sizes: Array<{ id: string; sizeLabel: string }>;
+  images: Array<{ id: string; imageUrl: string; altText?: string | null }>;
+};
+
+type SizeRow = {
+  sizeLabel: string;
+  blouseSize: string;
+  quantityTotal: string;
+};
+
+export function LehengasManager() {
+  const [collections, setCollections] = useState<CollectionOption[]>([]);
+  const [items, setItems] = useState<LehengaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<LehengaItem | null>(null);
+  const [sizes, setSizes] = useState<SizeRow[]>([
+    { sizeLabel: "M", blouseSize: "34", quantityTotal: "1" },
+  ]);
+  const [selectedImages, setSelectedImages] = useState<MockUploadImage[]>([]);
+  const [form, setForm] = useState({
+    name: "",
+    slug: "",
+    sku: "",
+    shortDescription: "",
+    description: "",
+    designer: "",
+    color: "",
+    fabric: "",
+    occasion: "",
+    rentalPricePerDay: "",
+    securityDeposit: "",
+    originalPrice: "",
+    minimumRentalDays: "1",
+    collectionId: "",
+  });
+
+  async function loadData() {
+    try {
+      setError(null);
+      const [collectionsData, itemsData] = await Promise.all([
+        adminRequest<CollectionOption[]>("/admin/collections", { withAuth: true }),
+        adminRequest<LehengaItem[]>("/admin/lehengas", { withAuth: true }),
+      ]);
+      setCollections(collectionsData);
+      setItems(itemsData);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load lehengas");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const [collectionsData, itemsData] = await Promise.all([
+          adminRequest<CollectionOption[]>("/admin/collections", { withAuth: true }),
+          adminRequest<LehengaItem[]>("/admin/lehengas", { withAuth: true }),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setError(null);
+        setCollections(collectionsData);
+        setItems(itemsData);
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Failed to load lehengas");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const images = await buildImagePayload(selectedImages);
+
+      await adminRequest("/admin/lehengas", {
+        method: "POST",
+        withAuth: true,
+        body: {
+          name: form.name,
+          slug: form.slug || undefined,
+          sku: form.sku,
+          shortDescription: form.shortDescription || undefined,
+          description: form.description || undefined,
+          designer: form.designer || undefined,
+          color: form.color || undefined,
+          fabric: form.fabric || undefined,
+          occasion: form.occasion || undefined,
+          rentalPricePerDay: Number(form.rentalPricePerDay),
+          securityDeposit: form.securityDeposit ? Number(form.securityDeposit) : undefined,
+          originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
+          minimumRentalDays: Number(form.minimumRentalDays),
+          collectionId: form.collectionId || undefined,
+          images,
+          sizes: sizes.map((size) => ({
+            sizeLabel: size.sizeLabel,
+            blouseSize: size.blouseSize || undefined,
+            quantityTotal: Number(size.quantityTotal || 1),
+            quantityReserved: 0,
+          })),
+        },
+      });
+
+      setForm({
+        name: "",
+        slug: "",
+        sku: "",
+        shortDescription: "",
+        description: "",
+        designer: "",
+        color: "",
+        fabric: "",
+        occasion: "",
+        rentalPricePerDay: "",
+        securityDeposit: "",
+        originalPrice: "",
+        minimumRentalDays: "1",
+        collectionId: "",
+      });
+      setSelectedImages([]);
+      setSizes([{ sizeLabel: "M", blouseSize: "34", quantityTotal: "1" }]);
+      await loadData();
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : "Failed to save");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await adminRequest(`/admin/lehengas/${id}`, {
+        method: "DELETE",
+        withAuth: true,
+      });
+      await loadData();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Delete failed");
+    }
+  }
+
+  return (
+    <div className="admin-grid-two admin-grid-form">
+      <section className="admin-panel">
+        <div className="admin-panel-heading">
+          <h3>Add lehenga</h3>
+        </div>
+        <form className="admin-form-grid" onSubmit={handleSubmit}>
+          <label className="admin-field">
+            <span>Name</span>
+            <input value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} required />
+          </label>
+          <label className="admin-field">
+            <span>SKU</span>
+            <input value={form.sku} onChange={(e) => setForm((c) => ({ ...c, sku: e.target.value }))} required />
+          </label>
+          <label className="admin-field">
+            <span>Slug</span>
+            <input value={form.slug} onChange={(e) => setForm((c) => ({ ...c, slug: e.target.value }))} />
+          </label>
+          <label className="admin-field">
+            <span>Designer</span>
+            <input
+              value={form.designer}
+              onChange={(e) => setForm((c) => ({ ...c, designer: e.target.value }))}
+            />
+          </label>
+          <label className="admin-field">
+            <span>Rental price per day</span>
+            <input
+              type="number"
+              value={form.rentalPricePerDay}
+              onChange={(e) => setForm((c) => ({ ...c, rentalPricePerDay: e.target.value }))}
+              required
+            />
+          </label>
+          <label className="admin-field">
+            <span>Collection</span>
+            <select
+              value={form.collectionId}
+              onChange={(e) => setForm((c) => ({ ...c, collectionId: e.target.value }))}
+            >
+              <option value="">No collection</option>
+              {collections.map((collection) => (
+                <option key={collection.id} value={collection.id}>
+                  {collection.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="admin-field admin-field-full">
+            <span>Short description</span>
+            <input
+              value={form.shortDescription}
+              onChange={(e) => setForm((c) => ({ ...c, shortDescription: e.target.value }))}
+            />
+          </label>
+          <label className="admin-field admin-field-full">
+            <span>Description</span>
+            <textarea
+              rows={4}
+              value={form.description}
+              onChange={(e) => setForm((c) => ({ ...c, description: e.target.value }))}
+            />
+          </label>
+          <MockImageDropzone
+            label="Product image upload"
+            hint="Select lehenga images. They will be uploaded to S3 when you save."
+            value={selectedImages}
+            onChange={setSelectedImages}
+          />
+
+          <div className="admin-field-full admin-size-panel">
+            <div className="admin-inline-head">
+              <span>Available sizes</span>
+              <button
+                type="button"
+                className="admin-secondary-button"
+                onClick={() =>
+                  setSizes((current) => [...current, { sizeLabel: "", blouseSize: "", quantityTotal: "1" }])
+                }
+              >
+                Add size row
+              </button>
+            </div>
+            <div className="admin-size-list">
+              {sizes.map((size, index) => (
+                <div key={`${size.sizeLabel}-${index}`} className="admin-size-row">
+                  <input
+                    placeholder="Size"
+                    value={size.sizeLabel}
+                    onChange={(event) =>
+                      setSizes((current) =>
+                        current.map((entry, entryIndex) =>
+                          entryIndex === index ? { ...entry, sizeLabel: event.target.value } : entry,
+                        ),
+                      )
+                    }
+                  />
+                  <input
+                    placeholder="Blouse"
+                    value={size.blouseSize}
+                    onChange={(event) =>
+                      setSizes((current) =>
+                        current.map((entry, entryIndex) =>
+                          entryIndex === index ? { ...entry, blouseSize: event.target.value } : entry,
+                        ),
+                      )
+                    }
+                  />
+                  <input
+                    type="number"
+                    placeholder="Qty"
+                    value={size.quantityTotal}
+                    onChange={(event) =>
+                      setSizes((current) =>
+                        current.map((entry, entryIndex) =>
+                          entryIndex === index ? { ...entry, quantityTotal: event.target.value } : entry,
+                        ),
+                      )
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="admin-danger-button"
+                    onClick={() =>
+                      setSizes((current) => current.filter((_, entryIndex) => entryIndex !== index))
+                    }
+                    disabled={sizes.length === 1}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {error ? <p className="admin-error-banner admin-field-full">{error}</p> : null}
+
+          <button className="admin-primary-button admin-field-full" type="submit" disabled={submitting}>
+            {submitting ? "Saving lehenga..." : "Add lehenga"}
+          </button>
+        </form>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-heading">
+          <h3>Lehenga catalog</h3>
+        </div>
+        {loading ? <p className="admin-empty-state">Loading lehengas...</p> : null}
+        <div className="admin-card-list">
+          {items.map((item) => (
+            <CatalogCard
+              key={item.id}
+              title={item.name}
+              subtitle={`${item.status} · SKU ${item.sku}`}
+              meta={`${item.images.length} image(s) · ${item.sizes.length} size option(s)`}
+              imageUrl={item.images[0]?.imageUrl}
+              onView={() => setPreviewItem(item)}
+              onDelete={() => handleDelete(item.id)}
+            />
+          ))}
+          {!loading && items.length === 0 ? (
+            <p className="admin-empty-state">No lehengas added yet.</p>
+          ) : null}
+        </div>
+      </section>
+
+      {previewItem ? (
+        <div className="admin-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="lehenga-preview-title">
+          <div className="admin-preview-modal">
+            <div className="admin-panel-heading">
+              <div>
+                <span className="admin-eyebrow">Catalog preview</span>
+                <h3 id="lehenga-preview-title">{previewItem.name}</h3>
+              </div>
+              <button type="button" className="admin-ghost-button" onClick={() => setPreviewItem(null)}>
+                Close
+              </button>
+            </div>
+
+            <div className="admin-preview-grid">
+              <div className="admin-preview-gallery">
+                {previewItem.images.map((image, index) => (
+                  <article key={image.id} className="admin-preview-gallery-item">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={image.imageUrl} alt={image.altText || `${previewItem.name} preview ${index + 1}`} />
+                  </article>
+                ))}
+              </div>
+
+              <div className="admin-preview-copy">
+                <div className="admin-preview-meta">
+                  <strong>SKU</strong>
+                  <span>{previewItem.sku}</span>
+                </div>
+                <div className="admin-preview-meta">
+                  <strong>Status</strong>
+                  <span>{previewItem.status}</span>
+                </div>
+                <div className="admin-preview-meta">
+                  <strong>Collection</strong>
+                  <span>{previewItem.collection?.name ?? "No collection"}</span>
+                </div>
+                <div className="admin-preview-meta">
+                  <strong>Rental price</strong>
+                  <span>Rs {previewItem.rentalPricePerDay}</span>
+                </div>
+                <div className="admin-preview-meta">
+                  <strong>Description</strong>
+                  <span>{previewItem.shortDescription || previewItem.description || "No description added."}</span>
+                </div>
+                <div className="admin-preview-meta">
+                  <strong>Sizes</strong>
+                  <span>{previewItem.sizes.map((size) => size.sizeLabel).join(", ") || "No sizes"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
