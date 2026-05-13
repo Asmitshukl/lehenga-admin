@@ -233,12 +233,12 @@ export function JewelleryManager() {
             />
           </label>
           <label className="admin-field">
-            <span>Collection</span>
+            <span>Category</span>
             <select
               value={form.collectionId}
               onChange={(e) => setForm((c) => ({ ...c, collectionId: e.target.value }))}
             >
-              <option value="">No collection</option>
+              <option value="">No category</option>
               {collections.map((collection) => (
                 <option key={collection.id} value={collection.id}>
                   {collection.name}

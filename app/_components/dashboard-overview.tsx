@@ -46,9 +46,9 @@ export function DashboardOverview() {
 
   const statCards = [
     {
-      label: "Active collections",
+      label: "Active categories",
       value: data.collections.length,
-      hint: "Seasonal and event-led edits",
+      hint: "Client-facing storefront edits",
     },
     {
       label: "Lehengas in catalog",
@@ -79,7 +79,7 @@ export function DashboardOverview() {
       <section className="admin-grid-two">
         <article className="admin-panel">
           <div className="admin-panel-heading">
-            <h3>Latest collections</h3>
+            <h3>Latest categories</h3>
           </div>
           <div className="admin-list">
             {data.collections.slice(0, 5).map((item) => (
@@ -88,7 +88,7 @@ export function DashboardOverview() {
               </div>
             ))}
             {!loading && data.collections.length === 0 ? (
-              <p className="admin-empty-state">No collections added yet.</p>
+              <p className="admin-empty-state">No categories added yet.</p>
             ) : null}
           </div>
         </article>
@@ -99,7 +99,7 @@ export function DashboardOverview() {
           </div>
           <div className="admin-notes-card">
             <p>
-              Use the side navigation to add collections first, then attach lehengas and jewellery
+              Use the side navigation to add categories first, then attach lehengas and jewellery
               items to the right edit.
             </p>
             <ul>

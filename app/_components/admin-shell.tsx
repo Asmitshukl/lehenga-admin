@@ -8,7 +8,7 @@ import { clearAdminToken, getAdminToken } from "../_lib/admin-auth";
 
 const navigation = [
   { href: "/", label: "Dashboard" },
-  { href: "/collections", label: "Collections" },
+  { href: "/collections", label: "Categories" },
   { href: "/lehengas", label: "Lehengas" },
   { href: "/jewellery", label: "Jewellery" },
   { href: "/orders", label: "Orders" },
@@ -49,7 +49,7 @@ export function AdminShell({
         <div className="admin-sidebar-brand">
           <span className="admin-brand-kicker">Lehenga</span>
           <h1>Admin Atelier</h1>
-          <p>Rental catalog control for collections, lehengas, and jewellery.</p>
+          <p>Rental catalog control for categories, lehengas, and jewellery.</p>
         </div>
 
         <nav className="admin-nav" aria-label="Admin navigation">

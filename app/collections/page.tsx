@@ -3,7 +3,7 @@ import { CollectionsManager } from "../_components/collections-manager";
 
 export default function LehengaAdminCollectionsPage() {
   return (
-    <AdminShell title="Collections" eyebrow="Season and event edits">
+    <AdminShell title="Categories" eyebrow="Client-facing category edits">
       <CollectionsManager />
     </AdminShell>
   );

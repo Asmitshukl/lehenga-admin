@@ -219,12 +219,12 @@ export function LehengasManager() {
             />
           </label>
           <label className="admin-field">
-            <span>Collection</span>
+            <span>Category</span>
             <select
               value={form.collectionId}
               onChange={(e) => setForm((c) => ({ ...c, collectionId: e.target.value }))}
             >
-              <option value="">No collection</option>
+              <option value="">No category</option>
               {collections.map((collection) => (
                 <option key={collection.id} value={collection.id}>
                   {collection.name}
@@ -383,8 +383,8 @@ export function LehengasManager() {
                   <span>{previewItem.status}</span>
                 </div>
                 <div className="admin-preview-meta">
-                  <strong>Collection</strong>
-                  <span>{previewItem.collection?.name ?? "No collection"}</span>
+                  <strong>Category</strong>
+                  <span>{previewItem.collection?.name ?? "No category"}</span>
                 </div>
                 <div className="admin-preview-meta">
                   <strong>Rental price</strong>

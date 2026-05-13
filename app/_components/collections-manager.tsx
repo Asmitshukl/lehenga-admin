@@ -18,6 +18,23 @@ type Collection = {
 const seasons = ["SPRING", "SUMMER", "MONSOON", "AUTUMN", "WINTER", "FESTIVE", "ALL_SEASON"];
 const audiences = ["WOMEN", "MEN", "UNISEX", "KIDS"];
 
+const seasonLabels: Record<string, string> = {
+  SPRING: "Bridal Edit",
+  SUMMER: "Wedding Festive",
+  MONSOON: "Reception Looks",
+  AUTUMN: "Mehendi Moments",
+  WINTER: "Royal Winter Wear",
+  FESTIVE: "Celebration Styles",
+  ALL_SEASON: "All Occasion",
+};
+
+const audienceLabels: Record<string, string> = {
+  WOMEN: "Bride",
+  MEN: "Groom",
+  UNISEX: "Family",
+  KIDS: "Kids",
+};
+
 export function CollectionsManager() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,15 +145,15 @@ export function CollectionsManager() {
     <div className="admin-grid-two admin-grid-form">
       <section className="admin-panel">
         <div className="admin-panel-heading">
-          <h3>Create collection</h3>
+          <h3>Create category</h3>
         </div>
         <form className="admin-form-grid" onSubmit={handleSubmit}>
           <label className="admin-field">
-            <span>Collection name</span>
+            <span>Category name</span>
             <input
               value={form.name}
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-              placeholder="Summer Bride Edit"
+              placeholder="Bridal Couture"
               required
             />
           </label>
@@ -146,7 +163,7 @@ export function CollectionsManager() {
             <input
               value={form.slug}
               onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))}
-              placeholder="summer-bride-edit"
+              placeholder="bridal-couture"
             />
           </label>
 
@@ -157,20 +174,20 @@ export function CollectionsManager() {
               onChange={(event) =>
                 setForm((current) => ({ ...current, description: event.target.value }))
               }
-              placeholder="Tell the admin team what belongs in this collection."
+              placeholder="Describe what belongs in this category."
               rows={4}
             />
           </label>
 
           <label className="admin-field">
-            <span>Season</span>
+            <span>Category style</span>
             <select
               value={form.season}
               onChange={(event) => setForm((current) => ({ ...current, season: event.target.value }))}
             >
               {seasons.map((season) => (
                 <option key={season} value={season}>
-                  {season}
+                  {seasonLabels[season] ?? season}
                 </option>
               ))}
             </select>
@@ -186,7 +203,7 @@ export function CollectionsManager() {
             >
               {audiences.map((audience) => (
                 <option key={audience} value={audience}>
-                  {audience}
+                  {audienceLabels[audience] ?? audience}
                 </option>
               ))}
             </select>
@@ -211,29 +228,30 @@ export function CollectionsManager() {
                 setForm((current) => ({ ...current, isFeatured: event.target.checked }))
               }
             />
-            <span>Feature this collection on the storefront</span>
+            <span>Feature this category on the storefront</span>
           </label>
 
           {error ? <p className="admin-error-banner admin-field-full">{error}</p> : null}
 
           <button className="admin-primary-button admin-field-full" type="submit" disabled={submitting}>
-            {submitting ? "Saving collection..." : "Add collection"}
+            {submitting ? "Saving category..." : "Add category"}
           </button>
         </form>
       </section>
 
       <section className="admin-panel">
         <div className="admin-panel-heading">
-          <h3>Current collections</h3>
+          <h3>Current categories</h3>
         </div>
-        {loading ? <p className="admin-empty-state">Loading collections...</p> : null}
+        {loading ? <p className="admin-empty-state">Loading categories...</p> : null}
         <div className="admin-card-list">
           {collections.map((collection) => (
             <article key={collection.id} className="admin-catalog-card">
               <div>
                 <strong>{collection.name}</strong>
                 <p>
-                  {collection.season} · {collection.audience}
+                  {seasonLabels[collection.season] ?? collection.season} ·{" "}
+                  {audienceLabels[collection.audience] ?? collection.audience}
                 </p>
                 <span>{collection.slug}</span>
               </div>
@@ -243,7 +261,7 @@ export function CollectionsManager() {
             </article>
           ))}
           {!loading && collections.length === 0 ? (
-            <p className="admin-empty-state">No collections yet. Create the first one from the form.</p>
+            <p className="admin-empty-state">No categories yet. Create the first one from the form.</p>
           ) : null}
         </div>
       </section>

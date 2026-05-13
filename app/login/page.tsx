@@ -14,7 +14,7 @@ export default function LehengaAdminLoginPage() {
         <span className="admin-eyebrow">Lehenga Admin</span>
         <h1>Manage every edit from one warm, polished control room.</h1>
         <p>
-          Add collections, publish lehengas, and build jewellery assortments that match the main
+          Add categories, publish lehengas, and build jewellery assortments that match the main
           storefront aesthetic.
         </p>
       </section>
