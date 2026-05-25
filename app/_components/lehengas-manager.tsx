@@ -7,7 +7,7 @@ import { buildImagePayload } from "../_lib/image-upload";
 import { CatalogCard } from "./catalog-card";
 import { MockImageDropzone, type MockUploadImage } from "./mock-image-dropzone";
 
-type CollectionOption = {
+type CategoryOption = {
   id: string;
   name: string;
 };
@@ -19,36 +19,25 @@ type LehengaItem = {
   status: string;
   shortDescription?: string | null;
   description?: string | null;
-  collection?: { id: string; name: string; slug: string } | null;
+  category?: { id: string; name: string; slug: string } | null;
   rentalPricePerDay: string;
   sizes: Array<{ id: string; sizeLabel: string }>;
   images: Array<{ id: string; imageUrl: string; altText?: string | null }>;
 };
 
-type SizeRow = {
-  sizeLabel: string;
-  blouseSize: string;
-  quantityTotal: string;
-};
-
 export function LehengasManager() {
-  const [collections, setCollections] = useState<CollectionOption[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [items, setItems] = useState<LehengaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<LehengaItem | null>(null);
-  const [sizes, setSizes] = useState<SizeRow[]>([
-    { sizeLabel: "M", blouseSize: "34", quantityTotal: "1" },
-  ]);
   const [selectedImages, setSelectedImages] = useState<MockUploadImage[]>([]);
   const [form, setForm] = useState({
     name: "",
-    slug: "",
     sku: "",
     shortDescription: "",
     description: "",
-    designer: "",
     color: "",
     fabric: "",
     occasion: "",
@@ -56,17 +45,18 @@ export function LehengasManager() {
     securityDeposit: "",
     originalPrice: "",
     minimumRentalDays: "1",
-    collectionId: "",
+    categoryId: "",
+    quantityTotal: "1",
   });
 
   async function loadData() {
     try {
       setError(null);
-      const [collectionsData, itemsData] = await Promise.all([
-        adminRequest<CollectionOption[]>("/admin/collections", { withAuth: true }),
+      const [categoriesData, itemsData] = await Promise.all([
+        adminRequest<CategoryOption[]>("/admin/categories", { withAuth: true }),
         adminRequest<LehengaItem[]>("/admin/lehengas", { withAuth: true }),
       ]);
-      setCollections(collectionsData);
+      setCategories(categoriesData);
       setItems(itemsData);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load lehengas");
@@ -80,8 +70,8 @@ export function LehengasManager() {
 
     const timer = window.setTimeout(async () => {
       try {
-        const [collectionsData, itemsData] = await Promise.all([
-          adminRequest<CollectionOption[]>("/admin/collections", { withAuth: true }),
+        const [categoriesData, itemsData] = await Promise.all([
+          adminRequest<CategoryOption[]>("/admin/categories", { withAuth: true }),
           adminRequest<LehengaItem[]>("/admin/lehengas", { withAuth: true }),
         ]);
 
@@ -90,7 +80,7 @@ export function LehengasManager() {
         }
 
         setError(null);
-        setCollections(collectionsData);
+        setCategories(categoriesData);
         setItems(itemsData);
       } catch (loadError) {
         if (!cancelled) {
@@ -122,11 +112,9 @@ export function LehengasManager() {
         withAuth: true,
         body: {
           name: form.name,
-          slug: form.slug || undefined,
           sku: form.sku,
           shortDescription: form.shortDescription || undefined,
           description: form.description || undefined,
-          designer: form.designer || undefined,
           color: form.color || undefined,
           fabric: form.fabric || undefined,
           occasion: form.occasion || undefined,
@@ -134,24 +122,23 @@ export function LehengasManager() {
           securityDeposit: form.securityDeposit ? Number(form.securityDeposit) : undefined,
           originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
           minimumRentalDays: Number(form.minimumRentalDays),
-          collectionId: form.collectionId || undefined,
+          categoryId: form.categoryId || undefined,
           images,
-          sizes: sizes.map((size) => ({
-            sizeLabel: size.sizeLabel,
-            blouseSize: size.blouseSize || undefined,
-            quantityTotal: Number(size.quantityTotal || 1),
-            quantityReserved: 0,
-          })),
+          sizes: [
+            {
+              sizeLabel: "Free Size",
+              quantityTotal: Number(form.quantityTotal || 1),
+              quantityReserved: 0,
+            },
+          ],
         },
       });
 
       setForm({
         name: "",
-        slug: "",
         sku: "",
         shortDescription: "",
         description: "",
-        designer: "",
         color: "",
         fabric: "",
         occasion: "",
@@ -159,10 +146,10 @@ export function LehengasManager() {
         securityDeposit: "",
         originalPrice: "",
         minimumRentalDays: "1",
-        collectionId: "",
+        categoryId: "",
+        quantityTotal: "1",
       });
       setSelectedImages([]);
-      setSizes([{ sizeLabel: "M", blouseSize: "34", quantityTotal: "1" }]);
       await loadData();
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "Failed to save");
@@ -199,17 +186,6 @@ export function LehengasManager() {
             <input value={form.sku} onChange={(e) => setForm((c) => ({ ...c, sku: e.target.value }))} required />
           </label>
           <label className="admin-field">
-            <span>Slug</span>
-            <input value={form.slug} onChange={(e) => setForm((c) => ({ ...c, slug: e.target.value }))} />
-          </label>
-          <label className="admin-field">
-            <span>Designer</span>
-            <input
-              value={form.designer}
-              onChange={(e) => setForm((c) => ({ ...c, designer: e.target.value }))}
-            />
-          </label>
-          <label className="admin-field">
             <span>Rental price per day</span>
             <input
               type="number"
@@ -221,16 +197,25 @@ export function LehengasManager() {
           <label className="admin-field">
             <span>Category</span>
             <select
-              value={form.collectionId}
-              onChange={(e) => setForm((c) => ({ ...c, collectionId: e.target.value }))}
+              value={form.categoryId}
+              onChange={(e) => setForm((c) => ({ ...c, categoryId: e.target.value }))}
             >
               <option value="">No category</option>
-              {collections.map((collection) => (
-                <option key={collection.id} value={collection.id}>
-                  {collection.name}
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
                 </option>
               ))}
             </select>
+          </label>
+          <label className="admin-field">
+            <span>Available quantity</span>
+            <input
+              type="number"
+              min={1}
+              value={form.quantityTotal}
+              onChange={(e) => setForm((c) => ({ ...c, quantityTotal: e.target.value }))}
+            />
           </label>
           <label className="admin-field admin-field-full">
             <span>Short description</span>
@@ -253,71 +238,6 @@ export function LehengasManager() {
             value={selectedImages}
             onChange={setSelectedImages}
           />
-
-          <div className="admin-field-full admin-size-panel">
-            <div className="admin-inline-head">
-              <span>Available sizes</span>
-              <button
-                type="button"
-                className="admin-secondary-button"
-                onClick={() =>
-                  setSizes((current) => [...current, { sizeLabel: "", blouseSize: "", quantityTotal: "1" }])
-                }
-              >
-                Add size row
-              </button>
-            </div>
-            <div className="admin-size-list">
-              {sizes.map((size, index) => (
-                <div key={`${size.sizeLabel}-${index}`} className="admin-size-row">
-                  <input
-                    placeholder="Size"
-                    value={size.sizeLabel}
-                    onChange={(event) =>
-                      setSizes((current) =>
-                        current.map((entry, entryIndex) =>
-                          entryIndex === index ? { ...entry, sizeLabel: event.target.value } : entry,
-                        ),
-                      )
-                    }
-                  />
-                  <input
-                    placeholder="Blouse"
-                    value={size.blouseSize}
-                    onChange={(event) =>
-                      setSizes((current) =>
-                        current.map((entry, entryIndex) =>
-                          entryIndex === index ? { ...entry, blouseSize: event.target.value } : entry,
-                        ),
-                      )
-                    }
-                  />
-                  <input
-                    type="number"
-                    placeholder="Qty"
-                    value={size.quantityTotal}
-                    onChange={(event) =>
-                      setSizes((current) =>
-                        current.map((entry, entryIndex) =>
-                          entryIndex === index ? { ...entry, quantityTotal: event.target.value } : entry,
-                        ),
-                      )
-                    }
-                  />
-                  <button
-                    type="button"
-                    className="admin-danger-button"
-                    onClick={() =>
-                      setSizes((current) => current.filter((_, entryIndex) => entryIndex !== index))
-                    }
-                    disabled={sizes.length === 1}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {error ? <p className="admin-error-banner admin-field-full">{error}</p> : null}
 
@@ -384,7 +304,7 @@ export function LehengasManager() {
                 </div>
                 <div className="admin-preview-meta">
                   <strong>Category</strong>
-                  <span>{previewItem.collection?.name ?? "No category"}</span>
+                  <span>{previewItem.category?.name ?? "No category"}</span>
                 </div>
                 <div className="admin-preview-meta">
                   <strong>Rental price</strong>
@@ -395,8 +315,8 @@ export function LehengasManager() {
                   <span>{previewItem.shortDescription || previewItem.description || "No description added."}</span>
                 </div>
                 <div className="admin-preview-meta">
-                  <strong>Sizes</strong>
-                  <span>{previewItem.sizes.map((size) => size.sizeLabel).join(", ") || "No sizes"}</span>
+                  <strong>Size setup</strong>
+                  <span>{previewItem.sizes[0]?.sizeLabel ?? "Free Size"}</span>
                 </div>
               </div>
             </div>

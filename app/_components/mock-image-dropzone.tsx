@@ -10,6 +10,10 @@ export type MockUploadImage = {
   file: File;
 };
 
+function getImageId(file: File, index: number) {
+  return `${file.name}-${file.lastModified}-${file.size}-${index}`;
+}
+
 function formatFileSize(size: number) {
   if (size < 1024 * 1024) {
     return `${Math.max(1, Math.round(size / 1024))} KB`;
@@ -44,18 +48,34 @@ export function MockImageDropzone({ label, hint, value, onChange }: MockImageDro
   }, [value]);
 
   function createImages(files: FileList) {
-    const nextImages = Array.from(files)
+    const incomingImages = Array.from(files)
       .filter((file) => file.type.startsWith("image/"))
       .map((file, index) => ({
-        id: `${file.name}-${file.lastModified}-${index}`,
+        id: getImageId(file, index),
         name: file.name,
         sizeLabel: formatFileSize(file.size),
         previewUrl: URL.createObjectURL(file),
         file,
       }));
+    const existingIds = new Set(value.map((image) => image.id));
+    const dedupedImages = incomingImages.filter((image) => !existingIds.has(image.id));
 
+    onChange([...value, ...dedupedImages]);
+  }
+
+  function handleRemove(id: string) {
+    const imageToRemove = value.find((image) => image.id === id);
+
+    if (imageToRemove) {
+      URL.revokeObjectURL(imageToRemove.previewUrl);
+    }
+
+    onChange(value.filter((image) => image.id !== id));
+  }
+
+  function handleClear() {
     value.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-    onChange(nextImages);
+    onChange([]);
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -121,6 +141,11 @@ export function MockImageDropzone({ label, hint, value, onChange }: MockImageDro
       <div className="admin-upload-meta">
         <strong>{summary}</strong>
         <span>Selected images appear below first, then they are uploaded when you save.</span>
+        {value.length > 0 ? (
+          <button type="button" className="admin-ghost-button" onClick={handleClear}>
+            Clear all
+          </button>
+        ) : null}
       </div>
 
       {value.length > 0 ? (
@@ -134,6 +159,9 @@ export function MockImageDropzone({ label, hint, value, onChange }: MockImageDro
                 <p>{image.name}</p>
                 <span>{image.sizeLabel}</span>
               </div>
+              <button type="button" className="admin-danger-button" onClick={() => handleRemove(image.id)}>
+                Remove
+              </button>
             </article>
           ))}
         </div>

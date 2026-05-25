@@ -7,7 +7,7 @@ import { buildImagePayload } from "../_lib/image-upload";
 import { CatalogCard } from "./catalog-card";
 import { MockImageDropzone, type MockUploadImage } from "./mock-image-dropzone";
 
-type CollectionOption = {
+type CategoryOption = {
   id: string;
   name: string;
 };
@@ -37,7 +37,7 @@ const jewelleryTypes = [
 ];
 
 export function JewelleryManager() {
-  const [collections, setCollections] = useState<CollectionOption[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [items, setItems] = useState<JewelleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -60,17 +60,17 @@ export function JewelleryManager() {
     originalPrice: "",
     minimumRentalDays: "1",
     stockQuantity: "1",
-    collectionId: "",
+    categoryId: "",
   });
 
   async function loadData() {
     try {
       setError(null);
-      const [collectionsData, itemsData] = await Promise.all([
-        adminRequest<CollectionOption[]>("/admin/collections", { withAuth: true }),
+      const [categoriesData, itemsData] = await Promise.all([
+        adminRequest<CategoryOption[]>("/admin/categories", { withAuth: true }),
         adminRequest<JewelleryItem[]>("/admin/jewellery", { withAuth: true }),
       ]);
-      setCollections(collectionsData);
+      setCategories(categoriesData);
       setItems(itemsData);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load jewellery page");
@@ -84,8 +84,8 @@ export function JewelleryManager() {
 
     const timer = window.setTimeout(async () => {
       try {
-        const [collectionsData, itemsData] = await Promise.all([
-          adminRequest<CollectionOption[]>("/admin/collections", { withAuth: true }),
+        const [categoriesData, itemsData] = await Promise.all([
+          adminRequest<CategoryOption[]>("/admin/categories", { withAuth: true }),
           adminRequest<JewelleryItem[]>("/admin/jewellery", { withAuth: true }),
         ]);
 
@@ -94,7 +94,7 @@ export function JewelleryManager() {
         }
 
         setError(null);
-        setCollections(collectionsData);
+        setCategories(categoriesData);
         setItems(itemsData);
       } catch (loadError) {
         if (!cancelled) {
@@ -141,7 +141,7 @@ export function JewelleryManager() {
           originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
           minimumRentalDays: Number(form.minimumRentalDays),
           stockQuantity: Number(form.stockQuantity),
-          collectionId: form.collectionId || undefined,
+          categoryId: form.categoryId || undefined,
           images,
         },
       });
@@ -163,7 +163,7 @@ export function JewelleryManager() {
         originalPrice: "",
         minimumRentalDays: "1",
         stockQuantity: "1",
-        collectionId: "",
+        categoryId: "",
       });
       setSelectedImages([]);
       await loadData();
@@ -235,13 +235,13 @@ export function JewelleryManager() {
           <label className="admin-field">
             <span>Category</span>
             <select
-              value={form.collectionId}
-              onChange={(e) => setForm((c) => ({ ...c, collectionId: e.target.value }))}
+              value={form.categoryId}
+              onChange={(e) => setForm((c) => ({ ...c, categoryId: e.target.value }))}
             >
               <option value="">No category</option>
-              {collections.map((collection) => (
-                <option key={collection.id} value={collection.id}>
-                  {collection.name}
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
                 </option>
               ))}
             </select>

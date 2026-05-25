@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { type DashboardData, fetchDashboardData } from "../_lib/admin-api";
 
 const emptyData: DashboardData = {
-  collections: [],
+  categories: [],
   lehengas: [],
   jewellery: [],
 };
@@ -47,7 +47,7 @@ export function DashboardOverview() {
   const statCards = [
     {
       label: "Active categories",
-      value: data.collections.length,
+      value: data.categories.length,
       hint: "Client-facing storefront edits",
     },
     {
@@ -82,12 +82,12 @@ export function DashboardOverview() {
             <h3>Latest categories</h3>
           </div>
           <div className="admin-list">
-            {data.collections.slice(0, 5).map((item) => (
+            {data.categories.slice(0, 5).map((item) => (
               <div key={item.id} className="admin-list-item">
                 <strong>{item.name}</strong>
               </div>
             ))}
-            {!loading && data.collections.length === 0 ? (
+            {!loading && data.categories.length === 0 ? (
               <p className="admin-empty-state">No categories added yet.</p>
             ) : null}
           </div>
@@ -104,7 +104,7 @@ export function DashboardOverview() {
             </p>
             <ul>
               <li>Multiple image URLs are supported.</li>
-              <li>Lehenga sizes can be managed while creating the product.</li>
+              <li>Lehengas now use a single-size inventory flow.</li>
               <li>All admin pages are connected to your Express backend.</li>
             </ul>
           </div>

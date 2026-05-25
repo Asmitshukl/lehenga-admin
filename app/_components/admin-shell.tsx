@@ -8,9 +8,10 @@ import { clearAdminToken, getAdminToken } from "../_lib/admin-auth";
 
 const navigation = [
   { href: "/", label: "Dashboard" },
-  { href: "/collections", label: "Categories" },
+  { href: "/categories", label: "Categories" },
   { href: "/lehengas", label: "Lehengas" },
   { href: "/jewellery", label: "Jewellery" },
+  { href: "/customers", label: "Customers" },
   { href: "/orders", label: "Orders" },
 ];
 

@@ -57,14 +57,14 @@ export async function adminRequest<T>(path: string, options: FetchOptions = {}):
 }
 
 export type DashboardData = {
-  collections: Array<{ id: string; name: string }>;
+  categories: Array<{ id: string; name: string }>;
   lehengas: Array<{ id: string; name: string; status: string }>;
   jewellery: Array<{ id: string; name: string; status: string }>;
 };
 
 export async function fetchDashboardData(): Promise<DashboardData> {
-  const [collections, lehengas, jewellery] = await Promise.all([
-    adminRequest<Array<{ id: string; name: string }>>("/admin/collections", { withAuth: true }),
+  const [categories, lehengas, jewellery] = await Promise.all([
+    adminRequest<Array<{ id: string; name: string }>>("/admin/categories", { withAuth: true }),
     adminRequest<Array<{ id: string; name: string; status: string }>>("/admin/lehengas", {
       withAuth: true,
     }),
@@ -73,5 +73,5 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     }),
   ]);
 
-  return { collections, lehengas, jewellery };
+  return { categories, lehengas, jewellery };
 }
