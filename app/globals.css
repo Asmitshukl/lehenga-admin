@@ -430,7 +430,7 @@ img {
 
 .admin-order-editor-row {
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr) 120px auto;
+  grid-template-columns: 120px minmax(0, 1fr) 100px 160px 160px auto;
   gap: 10px;
   align-items: center;
 }

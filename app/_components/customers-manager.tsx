@@ -36,6 +36,8 @@ type OrderItemDraft = {
   itemType: "LEHENGA" | "JEWELLERY";
   productId: string;
   quantity: string;
+  rentalStartDate: string;
+  rentalEndDate: string;
 };
 
 function formatDate(value: string) {
@@ -66,7 +68,15 @@ export function CustomersManager() {
     rentalEndDate: "",
     specialInstructions: "",
     internalNotes: "",
-    items: [{ itemType: "LEHENGA", productId: "", quantity: "1" }] as OrderItemDraft[],
+    items: [
+      {
+        itemType: "LEHENGA",
+        productId: "",
+        quantity: "1",
+        rentalStartDate: "",
+        rentalEndDate: "",
+      },
+    ] as OrderItemDraft[],
   });
 
   async function loadData() {
@@ -156,6 +166,7 @@ export function CustomersManager() {
           customerId: orderCustomerId,
           rentalStartDate: orderForm.rentalStartDate,
           rentalEndDate: orderForm.rentalEndDate,
+          paymentMethod: "PICKUP",
           specialInstructions: orderForm.specialInstructions || undefined,
           internalNotes: orderForm.internalNotes || undefined,
           items: orderForm.items.map((item) =>
@@ -164,11 +175,15 @@ export function CustomersManager() {
                   itemType: item.itemType,
                   lehengaId: item.productId,
                   quantity: Number(item.quantity || 1),
+                  rentalStartDate: item.rentalStartDate,
+                  rentalEndDate: item.rentalEndDate,
                 }
               : {
                   itemType: item.itemType,
                   jewelleryId: item.productId,
                   quantity: Number(item.quantity || 1),
+                  rentalStartDate: item.rentalStartDate,
+                  rentalEndDate: item.rentalEndDate,
                 },
           ),
         },
@@ -180,7 +195,15 @@ export function CustomersManager() {
         rentalEndDate: "",
         specialInstructions: "",
         internalNotes: "",
-        items: [{ itemType: "LEHENGA", productId: "", quantity: "1" }],
+        items: [
+          {
+            itemType: "LEHENGA",
+            productId: "",
+            quantity: "1",
+            rentalStartDate: "",
+            rentalEndDate: "",
+          },
+        ],
       });
       await loadData();
     } catch (submissionError) {
@@ -346,7 +369,14 @@ export function CustomersManager() {
                     required
                     value={orderForm.rentalStartDate}
                     onChange={(event) =>
-                      setOrderForm((current) => ({ ...current, rentalStartDate: event.target.value }))
+                      setOrderForm((current) => ({
+                        ...current,
+                        rentalStartDate: event.target.value,
+                        items: current.items.map((item) => ({
+                          ...item,
+                          rentalStartDate: event.target.value,
+                        })),
+                      }))
                     }
                   />
                 </label>
@@ -357,7 +387,14 @@ export function CustomersManager() {
                     required
                     value={orderForm.rentalEndDate}
                     onChange={(event) =>
-                      setOrderForm((current) => ({ ...current, rentalEndDate: event.target.value }))
+                      setOrderForm((current) => ({
+                        ...current,
+                        rentalEndDate: event.target.value,
+                        items: current.items.map((item) => ({
+                          ...item,
+                          rentalEndDate: event.target.value,
+                        })),
+                      }))
                     }
                   />
                 </label>
@@ -376,7 +413,13 @@ export function CustomersManager() {
                             ...current,
                             items: current.items.map((entry, entryIndex) =>
                               entryIndex === index
-                                ? { itemType: event.target.value as "LEHENGA" | "JEWELLERY", productId: "", quantity: "1" }
+                                ? {
+                                    itemType: event.target.value as "LEHENGA" | "JEWELLERY",
+                                    productId: "",
+                                    quantity: "1",
+                                    rentalStartDate: entry.rentalStartDate,
+                                    rentalEndDate: entry.rentalEndDate,
+                                  }
                                 : entry,
                             ),
                           }))
@@ -417,6 +460,33 @@ export function CustomersManager() {
                           }))
                         }
                       />
+                      <input
+                        type="date"
+                        required
+                        value={item.rentalStartDate}
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            items: current.items.map((entry, entryIndex) =>
+                              entryIndex === index ? { ...entry, rentalStartDate: event.target.value } : entry,
+                            ),
+                          }))
+                        }
+                      />
+                      <input
+                        type="date"
+                        required
+                        min={item.rentalStartDate || undefined}
+                        value={item.rentalEndDate}
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            items: current.items.map((entry, entryIndex) =>
+                              entryIndex === index ? { ...entry, rentalEndDate: event.target.value } : entry,
+                            ),
+                          }))
+                        }
+                      />
                       <button
                         type="button"
                         className="admin-danger-button"
@@ -442,7 +512,16 @@ export function CustomersManager() {
                   onClick={() =>
                     setOrderForm((current) => ({
                       ...current,
-                      items: [...current.items, { itemType: "LEHENGA", productId: "", quantity: "1" }],
+                      items: [
+                        ...current.items,
+                        {
+                          itemType: "LEHENGA",
+                          productId: "",
+                          quantity: "1",
+                          rentalStartDate: current.rentalStartDate,
+                          rentalEndDate: current.rentalEndDate,
+                        },
+                      ],
                     }))
                   }
                 >

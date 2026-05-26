@@ -21,6 +21,9 @@ type LehengaItem = {
   description?: string | null;
   category?: { id: string; name: string; slug: string } | null;
   rentalPricePerDay: string;
+  securityDeposit?: string | null;
+  originalPrice?: string | null;
+  minimumRentalDays?: number | null;
   sizes: Array<{ id: string; sizeLabel: string }>;
   images: Array<{ id: string; imageUrl: string; altText?: string | null }>;
 };
@@ -195,6 +198,33 @@ export function LehengasManager() {
             />
           </label>
           <label className="admin-field">
+            <span>Security deposit</span>
+            <input
+              type="number"
+              min={0}
+              value={form.securityDeposit}
+              onChange={(e) => setForm((c) => ({ ...c, securityDeposit: e.target.value }))}
+            />
+          </label>
+          <label className="admin-field">
+            <span>Original price</span>
+            <input
+              type="number"
+              min={0}
+              value={form.originalPrice}
+              onChange={(e) => setForm((c) => ({ ...c, originalPrice: e.target.value }))}
+            />
+          </label>
+          <label className="admin-field">
+            <span>Minimum rental days</span>
+            <input
+              type="number"
+              min={1}
+              value={form.minimumRentalDays}
+              onChange={(e) => setForm((c) => ({ ...c, minimumRentalDays: e.target.value }))}
+            />
+          </label>
+          <label className="admin-field">
             <span>Category</span>
             <select
               value={form.categoryId}
@@ -309,6 +339,18 @@ export function LehengasManager() {
                 <div className="admin-preview-meta">
                   <strong>Rental price</strong>
                   <span>Rs {previewItem.rentalPricePerDay}</span>
+                </div>
+                <div className="admin-preview-meta">
+                  <strong>Security deposit</strong>
+                  <span>{previewItem.securityDeposit ? `Rs ${previewItem.securityDeposit}` : "Not set"}</span>
+                </div>
+                <div className="admin-preview-meta">
+                  <strong>Original price</strong>
+                  <span>{previewItem.originalPrice ? `Rs ${previewItem.originalPrice}` : "Not set"}</span>
+                </div>
+                <div className="admin-preview-meta">
+                  <strong>Minimum rental</strong>
+                  <span>{previewItem.minimumRentalDays ? `${previewItem.minimumRentalDays} day(s)` : "1 day"}</span>
                 </div>
                 <div className="admin-preview-meta">
                   <strong>Description</strong>

@@ -18,6 +18,9 @@ type JewelleryItem = {
   sku: string;
   type: string;
   rentalPricePerDay: string;
+  securityDeposit?: string | null;
+  originalPrice?: string | null;
+  minimumRentalDays?: number | null;
   images: Array<{ id: string; imageUrl: string; altText?: string | null }>;
 };
 
@@ -222,6 +225,33 @@ export function JewelleryManager() {
               value={form.rentalPricePerDay}
               onChange={(e) => setForm((c) => ({ ...c, rentalPricePerDay: e.target.value }))}
               required
+            />
+          </label>
+          <label className="admin-field">
+            <span>Security deposit</span>
+            <input
+              type="number"
+              min={0}
+              value={form.securityDeposit}
+              onChange={(e) => setForm((c) => ({ ...c, securityDeposit: e.target.value }))}
+            />
+          </label>
+          <label className="admin-field">
+            <span>Original price</span>
+            <input
+              type="number"
+              min={0}
+              value={form.originalPrice}
+              onChange={(e) => setForm((c) => ({ ...c, originalPrice: e.target.value }))}
+            />
+          </label>
+          <label className="admin-field">
+            <span>Minimum rental days</span>
+            <input
+              type="number"
+              min={1}
+              value={form.minimumRentalDays}
+              onChange={(e) => setForm((c) => ({ ...c, minimumRentalDays: e.target.value }))}
             />
           </label>
           <label className="admin-field">

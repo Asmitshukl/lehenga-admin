@@ -11,6 +11,8 @@ type OrderItem = {
   skuSnapshot: string;
   sizeLabelSnapshot?: string | null;
   quantity: number;
+  rentalStartDate: string;
+  rentalEndDate: string;
   rentalDays: number;
   lineTotal: string;
   lehengaId?: string | null;
@@ -22,11 +24,16 @@ type Order = {
   orderNumber: string;
   status: string;
   paymentStatus: string;
+  paymentMethod?: string;
   rentalStartDate: string;
   rentalEndDate: string;
   subtotalAmount: string;
   securityDeposit: string;
   totalAmount: string;
+  amountPaid?: string;
+  amountDueAtPickup?: string;
+  depositRefundStatus?: string;
+  depositRefundedAmount?: string;
   specialInstructions?: string | null;
   internalNotes?: string | null;
   customer: {
@@ -50,6 +57,8 @@ type EditItemDraft = {
   itemType: "LEHENGA" | "JEWELLERY";
   productId: string;
   quantity: string;
+  rentalStartDate: string;
+  rentalEndDate: string;
 };
 
 function formatDate(value: string) {
@@ -129,6 +138,23 @@ export function OrdersManager() {
     }
   }
 
+  async function handleRefundDeposit(orderId: string) {
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await adminRequest(`/admin/orders/${orderId}/refund-deposit`, {
+        method: "POST",
+        withAuth: true,
+      });
+      await loadOrders();
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : "Failed to refund deposit");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   function openEdit(order: Order) {
     setEditingOrder(order);
     setEditForm({
@@ -141,6 +167,8 @@ export function OrdersManager() {
         itemType: item.itemType,
         productId: item.itemType === "LEHENGA" ? item.lehengaId ?? "" : item.jewelleryId ?? "",
         quantity: String(item.quantity),
+        rentalStartDate: item.rentalStartDate.slice(0, 10),
+        rentalEndDate: item.rentalEndDate.slice(0, 10),
       })),
     });
   }
@@ -170,11 +198,15 @@ export function OrdersManager() {
                   itemType: item.itemType,
                   lehengaId: item.productId,
                   quantity: Number(item.quantity || 1),
+                  rentalStartDate: item.rentalStartDate,
+                  rentalEndDate: item.rentalEndDate,
                 }
               : {
                   itemType: item.itemType,
                   jewelleryId: item.productId,
                   quantity: Number(item.quantity || 1),
+                  rentalStartDate: item.rentalStartDate,
+                  rentalEndDate: item.rentalEndDate,
                 },
           ),
         },
@@ -242,7 +274,7 @@ export function OrdersManager() {
                 {order.customer.email ? ` · ${order.customer.email}` : ""}
               </p>
               <p>
-                {order.status} · {order.paymentStatus}
+                {order.status} · {order.paymentStatus} · {order.paymentMethod ?? "PICKUP"}
               </p>
               <p>
                 {formatDate(order.rentalStartDate)} to {formatDate(order.rentalEndDate)}
@@ -253,9 +285,12 @@ export function OrdersManager() {
                 {order.items
                   .map(
                     (item) =>
-                      `${item.productNameSnapshot}${item.sizeLabelSnapshot ? ` (${item.sizeLabelSnapshot})` : ""} x${item.quantity}`,
+                      `${item.productNameSnapshot}${item.sizeLabelSnapshot ? ` (${item.sizeLabelSnapshot})` : ""} x${item.quantity} · ${formatDate(item.rentalStartDate)} to ${formatDate(item.rentalEndDate)}`,
                   )
                   .join(", ")}
+              </p>
+              <p>
+                Deposit: Rs {order.securityDeposit} · Refund status: {order.depositRefundStatus ?? "NOT_APPLICABLE"}
               </p>
             </div>
 
@@ -271,9 +306,18 @@ export function OrdersManager() {
               <button type="button" className="admin-secondary-button" onClick={() => openEdit(order)}>
                 Edit
               </button>
-              <button type="button" className="admin-ghost-button" onClick={() => openEdit(order)}>
-                Update
-              </button>
+              {order.paymentMethod === "ONLINE" &&
+              order.paymentStatus === "PAID" &&
+              order.depositRefundStatus !== "REFUNDED" ? (
+                <button
+                  type="button"
+                  className="admin-ghost-button"
+                  onClick={() => handleRefundDeposit(order.id)}
+                  disabled={submitting}
+                >
+                  Refund fixed deposit
+                </button>
+              ) : null}
             </div>
           </article>
         ))}
@@ -307,7 +351,14 @@ export function OrdersManager() {
                     required
                     value={editForm.rentalStartDate}
                     onChange={(event) =>
-                      setEditForm((current) => ({ ...current, rentalStartDate: event.target.value }))
+                      setEditForm((current) => ({
+                        ...current,
+                        rentalStartDate: event.target.value,
+                        items: current.items.map((item) => ({
+                          ...item,
+                          rentalStartDate: event.target.value,
+                        })),
+                      }))
                     }
                   />
                 </label>
@@ -318,7 +369,14 @@ export function OrdersManager() {
                     required
                     value={editForm.rentalEndDate}
                     onChange={(event) =>
-                      setEditForm((current) => ({ ...current, rentalEndDate: event.target.value }))
+                      setEditForm((current) => ({
+                        ...current,
+                        rentalEndDate: event.target.value,
+                        items: current.items.map((item) => ({
+                          ...item,
+                          rentalEndDate: event.target.value,
+                        })),
+                      }))
                     }
                   />
                 </label>
@@ -358,6 +416,33 @@ export function OrdersManager() {
                             ...current,
                             items: current.items.map((entry, entryIndex) =>
                               entryIndex === index ? { ...entry, quantity: event.target.value } : entry,
+                            ),
+                          }))
+                        }
+                      />
+                      <input
+                        type="date"
+                        required
+                        value={item.rentalStartDate}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            items: current.items.map((entry, entryIndex) =>
+                              entryIndex === index ? { ...entry, rentalStartDate: event.target.value } : entry,
+                            ),
+                          }))
+                        }
+                      />
+                      <input
+                        type="date"
+                        required
+                        min={item.rentalStartDate || undefined}
+                        value={item.rentalEndDate}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            items: current.items.map((entry, entryIndex) =>
+                              entryIndex === index ? { ...entry, rentalEndDate: event.target.value } : entry,
                             ),
                           }))
                         }
