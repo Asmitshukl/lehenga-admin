@@ -19,12 +19,14 @@ type LehengaItem = {
   status: string;
   shortDescription?: string | null;
   description?: string | null;
+  color?: string | null;
+  fabric?: string | null;
+  occasion?: string | null;
   category?: { id: string; name: string; slug: string } | null;
   rentalPricePerDay: string;
   securityDeposit?: string | null;
-  originalPrice?: string | null;
   minimumRentalDays?: number | null;
-  sizes: Array<{ id: string; sizeLabel: string }>;
+  sizes: Array<{ id: string; sizeLabel: string; quantityTotal: number; quantityReserved: number }>;
   images: Array<{ id: string; imageUrl: string; altText?: string | null }>;
 };
 
@@ -36,6 +38,8 @@ export function LehengasManager() {
   const [error, setError] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<LehengaItem | null>(null);
   const [selectedImages, setSelectedImages] = useState<MockUploadImage[]>([]);
+  const [editingItem, setEditingItem] = useState<LehengaItem | null>(null);
+  const [editImages, setEditImages] = useState<MockUploadImage[]>([]);
   const [form, setForm] = useState({
     name: "",
     sku: "",
@@ -46,10 +50,24 @@ export function LehengasManager() {
     occasion: "",
     rentalPricePerDay: "",
     securityDeposit: "",
-    originalPrice: "",
     minimumRentalDays: "1",
     categoryId: "",
     quantityTotal: "1",
+  });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    sku: "",
+    shortDescription: "",
+    description: "",
+    color: "",
+    fabric: "",
+    occasion: "",
+    rentalPricePerDay: "",
+    securityDeposit: "",
+    minimumRentalDays: "1",
+    categoryId: "",
+    quantityTotal: "1",
+    quantityReserved: "0",
   });
 
   async function loadData() {
@@ -123,7 +141,6 @@ export function LehengasManager() {
           occasion: form.occasion || undefined,
           rentalPricePerDay: Number(form.rentalPricePerDay),
           securityDeposit: form.securityDeposit ? Number(form.securityDeposit) : undefined,
-          originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
           minimumRentalDays: Number(form.minimumRentalDays),
           categoryId: form.categoryId || undefined,
           images,
@@ -147,7 +164,6 @@ export function LehengasManager() {
         occasion: "",
         rentalPricePerDay: "",
         securityDeposit: "",
-        originalPrice: "",
         minimumRentalDays: "1",
         categoryId: "",
         quantityTotal: "1",
@@ -170,6 +186,75 @@ export function LehengasManager() {
       await loadData();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Delete failed");
+    }
+  }
+
+  function openEdit(item: LehengaItem) {
+    setEditingItem(item);
+    setEditImages([]);
+    setEditForm({
+      name: item.name,
+      sku: item.sku,
+      shortDescription: item.shortDescription ?? "",
+      description: item.description ?? "",
+      color: item.color ?? "",
+      fabric: item.fabric ?? "",
+      occasion: item.occasion ?? "",
+      rentalPricePerDay: item.rentalPricePerDay,
+      securityDeposit: item.securityDeposit ?? "",
+      minimumRentalDays: String(item.minimumRentalDays ?? 1),
+      categoryId: item.category?.id ?? "",
+      quantityTotal: String(item.sizes[0]?.quantityTotal ?? 1),
+      quantityReserved: String(item.sizes[0]?.quantityReserved ?? 0),
+    });
+  }
+
+  async function handleEditSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingItem) {
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const images = editImages.length > 0 ? await buildImagePayload(editImages) : undefined;
+
+      await adminRequest(`/admin/lehengas/${editingItem.id}`, {
+        method: "PATCH",
+        withAuth: true,
+        body: {
+          name: editForm.name,
+          sku: editForm.sku,
+          shortDescription: editForm.shortDescription || undefined,
+          description: editForm.description || undefined,
+          color: editForm.color || undefined,
+          fabric: editForm.fabric || undefined,
+          occasion: editForm.occasion || undefined,
+          rentalPricePerDay: Number(editForm.rentalPricePerDay),
+          securityDeposit: editForm.securityDeposit ? Number(editForm.securityDeposit) : undefined,
+          minimumRentalDays: Number(editForm.minimumRentalDays),
+          categoryId: editForm.categoryId || undefined,
+          sizes: [
+            {
+              sizeLabel: editingItem.sizes[0]?.sizeLabel ?? "Free Size",
+              quantityTotal: Number(editForm.quantityTotal || 1),
+              quantityReserved: Number(editForm.quantityReserved || 0),
+            },
+          ],
+          ...(images ? { images } : {}),
+        },
+      });
+
+      setEditingItem(null);
+      setEditImages([]);
+      await loadData();
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : "Failed to update lehenga");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -204,15 +289,6 @@ export function LehengasManager() {
               min={0}
               value={form.securityDeposit}
               onChange={(e) => setForm((c) => ({ ...c, securityDeposit: e.target.value }))}
-            />
-          </label>
-          <label className="admin-field">
-            <span>Original price</span>
-            <input
-              type="number"
-              min={0}
-              value={form.originalPrice}
-              onChange={(e) => setForm((c) => ({ ...c, originalPrice: e.target.value }))}
             />
           </label>
           <label className="admin-field">
@@ -288,9 +364,10 @@ export function LehengasManager() {
               key={item.id}
               title={item.name}
               subtitle={`${item.status} · SKU ${item.sku}`}
-              meta={`${item.images.length} image(s) · ${item.sizes.length} size option(s)`}
+              meta={`${item.images.length} image(s) · ${item.sizes[0]?.quantityTotal ?? 0} total`}
               imageUrl={item.images[0]?.imageUrl}
               onView={() => setPreviewItem(item)}
+              onEdit={() => openEdit(item)}
               onDelete={() => handleDelete(item.id)}
             />
           ))}
@@ -345,10 +422,6 @@ export function LehengasManager() {
                   <span>{previewItem.securityDeposit ? `Rs ${previewItem.securityDeposit}` : "Not set"}</span>
                 </div>
                 <div className="admin-preview-meta">
-                  <strong>Original price</strong>
-                  <span>{previewItem.originalPrice ? `Rs ${previewItem.originalPrice}` : "Not set"}</span>
-                </div>
-                <div className="admin-preview-meta">
                   <strong>Minimum rental</strong>
                   <span>{previewItem.minimumRentalDays ? `${previewItem.minimumRentalDays} day(s)` : "1 day"}</span>
                 </div>
@@ -362,6 +435,80 @@ export function LehengasManager() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {editingItem ? (
+        <div className="admin-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-lehenga-title">
+          <div className="admin-preview-modal">
+            <div className="admin-panel-heading">
+              <div>
+                <span className="admin-eyebrow">Edit lehenga</span>
+                <h3 id="edit-lehenga-title">{editingItem.name}</h3>
+              </div>
+              <button type="button" className="admin-ghost-button" onClick={() => setEditingItem(null)}>
+                Close
+              </button>
+            </div>
+            <form className="admin-form-grid" onSubmit={handleEditSubmit}>
+              <label className="admin-field">
+                <span>Name</span>
+                <input value={editForm.name} onChange={(e) => setEditForm((c) => ({ ...c, name: e.target.value }))} required />
+              </label>
+              <label className="admin-field">
+                <span>SKU</span>
+                <input value={editForm.sku} onChange={(e) => setEditForm((c) => ({ ...c, sku: e.target.value }))} required />
+              </label>
+              <label className="admin-field">
+                <span>Rental price per day</span>
+                <input type="number" value={editForm.rentalPricePerDay} onChange={(e) => setEditForm((c) => ({ ...c, rentalPricePerDay: e.target.value }))} required />
+              </label>
+              <label className="admin-field">
+                <span>Security deposit</span>
+                <input type="number" min={0} value={editForm.securityDeposit} onChange={(e) => setEditForm((c) => ({ ...c, securityDeposit: e.target.value }))} />
+              </label>
+              <label className="admin-field">
+                <span>Minimum rental days</span>
+                <input type="number" min={1} value={editForm.minimumRentalDays} onChange={(e) => setEditForm((c) => ({ ...c, minimumRentalDays: e.target.value }))} />
+              </label>
+              <label className="admin-field">
+                <span>Category</span>
+                <select value={editForm.categoryId} onChange={(e) => setEditForm((c) => ({ ...c, categoryId: e.target.value }))}>
+                  <option value="">No category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="admin-field">
+                <span>Total quantity</span>
+                <input type="number" min={1} value={editForm.quantityTotal} onChange={(e) => setEditForm((c) => ({ ...c, quantityTotal: e.target.value }))} />
+              </label>
+              <label className="admin-field">
+                <span>Reserved quantity</span>
+                <input type="number" min={0} value={editForm.quantityReserved} onChange={(e) => setEditForm((c) => ({ ...c, quantityReserved: e.target.value }))} />
+              </label>
+              <label className="admin-field admin-field-full">
+                <span>Short description</span>
+                <input value={editForm.shortDescription} onChange={(e) => setEditForm((c) => ({ ...c, shortDescription: e.target.value }))} />
+              </label>
+              <label className="admin-field admin-field-full">
+                <span>Description</span>
+                <textarea rows={4} value={editForm.description} onChange={(e) => setEditForm((c) => ({ ...c, description: e.target.value }))} />
+              </label>
+              <MockImageDropzone
+                label="Replace lehenga images"
+                hint="Select new images only if you want to replace the current set."
+                value={editImages}
+                onChange={setEditImages}
+              />
+              <button className="admin-primary-button admin-field-full" type="submit" disabled={submitting}>
+                {submitting ? "Saving lehenga..." : "Save changes"}
+              </button>
+            </form>
           </div>
         </div>
       ) : null}

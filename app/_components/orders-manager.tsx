@@ -4,6 +4,15 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { adminRequest } from "../_lib/admin-api";
 
+type ItemMeasurements = {
+  upper?: string | null;
+  chest?: string | null;
+  waist?: string | null;
+  armHole?: string | null;
+  mori?: string | null;
+  notes?: string | null;
+};
+
 type OrderItem = {
   id: string;
   itemType: "LEHENGA" | "JEWELLERY";
@@ -17,6 +26,12 @@ type OrderItem = {
   lineTotal: string;
   lehengaId?: string | null;
   jewelleryId?: string | null;
+  measurementUpper?: string | null;
+  measurementChest?: string | null;
+  measurementWaist?: string | null;
+  measurementArmHole?: string | null;
+  measurementMori?: string | null;
+  measurementNotes?: string | null;
 };
 
 type Order = {
@@ -59,12 +74,52 @@ type EditItemDraft = {
   quantity: string;
   rentalStartDate: string;
   rentalEndDate: string;
+  measurements?: ItemMeasurements | null;
 };
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-IN", {
     dateStyle: "medium",
   }).format(new Date(value));
+}
+
+function formatStatusLabel(value?: string | null) {
+  if (!value) {
+    return "Not available";
+  }
+
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function formatPaymentMethod(value?: string | null) {
+  if (!value) {
+    return "Pay at pickup";
+  }
+
+  return value === "ONLINE" ? "Online payment" : "Pay at pickup";
+}
+
+function formatMeasurements(item: Pick<
+  OrderItem,
+  | "measurementUpper"
+  | "measurementChest"
+  | "measurementWaist"
+  | "measurementArmHole"
+  | "measurementMori"
+  | "measurementNotes"
+>) {
+  return [
+    item.measurementUpper ? `Upper: ${item.measurementUpper}` : null,
+    item.measurementChest ? `Chest: ${item.measurementChest}` : null,
+    item.measurementWaist ? `Waist: ${item.measurementWaist}` : null,
+    item.measurementArmHole ? `Arm hole: ${item.measurementArmHole}` : null,
+    item.measurementMori ? `Mori: ${item.measurementMori}` : null,
+    item.measurementNotes ? `Notes: ${item.measurementNotes}` : null,
+  ].filter((value): value is string => Boolean(value));
 }
 
 export function OrdersManager() {
@@ -169,6 +224,14 @@ export function OrdersManager() {
         quantity: String(item.quantity),
         rentalStartDate: item.rentalStartDate.slice(0, 10),
         rentalEndDate: item.rentalEndDate.slice(0, 10),
+        measurements: {
+          upper: item.measurementUpper ?? undefined,
+          chest: item.measurementChest ?? undefined,
+          waist: item.measurementWaist ?? undefined,
+          armHole: item.measurementArmHole ?? undefined,
+          mori: item.measurementMori ?? undefined,
+          notes: item.measurementNotes ?? undefined,
+        },
       })),
     });
   }
@@ -200,6 +263,7 @@ export function OrdersManager() {
                   quantity: Number(item.quantity || 1),
                   rentalStartDate: item.rentalStartDate,
                   rentalEndDate: item.rentalEndDate,
+                  measurements: item.measurements ?? undefined,
                 }
               : {
                   itemType: item.itemType,
@@ -274,7 +338,13 @@ export function OrdersManager() {
                 {order.customer.email ? ` · ${order.customer.email}` : ""}
               </p>
               <p>
-                {order.status} · {order.paymentStatus} · {order.paymentMethod ?? "PICKUP"}
+                Fulfillment status: {formatStatusLabel(order.status)}
+              </p>
+              <p>
+                Payment status: {formatStatusLabel(order.paymentStatus)}
+              </p>
+              <p>
+                Payment method: {formatPaymentMethod(order.paymentMethod)}
               </p>
               <p>
                 {formatDate(order.rentalStartDate)} to {formatDate(order.rentalEndDate)}
@@ -289,6 +359,20 @@ export function OrdersManager() {
                   )
                   .join(", ")}
               </p>
+              {order.items.some((item) => formatMeasurements(item).length > 0) ? (
+                <div className="admin-order-measurements">
+                  <strong>Lehenga details</strong>
+                  <div className="admin-order-measurement-list">
+                    {order.items.flatMap((item) =>
+                      formatMeasurements(item).map((detail) => (
+                        <span key={`${item.id}-${detail}`}>
+                          {item.productNameSnapshot}: {detail}
+                        </span>
+                      )),
+                    )}
+                  </div>
+                </div>
+              ) : null}
               <p>
                 Deposit: Rs {order.securityDeposit} · Refund status: {order.depositRefundStatus ?? "NOT_APPLICABLE"}
               </p>

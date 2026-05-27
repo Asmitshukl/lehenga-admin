@@ -17,10 +17,17 @@ type JewelleryItem = {
   name: string;
   sku: string;
   type: string;
+  shortDescription?: string | null;
+  description?: string | null;
+  color?: string | null;
+  finish?: string | null;
+  stoneDetails?: string | null;
+  occasion?: string | null;
   rentalPricePerDay: string;
   securityDeposit?: string | null;
-  originalPrice?: string | null;
   minimumRentalDays?: number | null;
+  stockQuantity: number;
+  category?: { id: string; name: string } | null;
   images: Array<{ id: string; imageUrl: string; altText?: string | null }>;
 };
 
@@ -46,21 +53,36 @@ export function JewelleryManager() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedImages, setSelectedImages] = useState<MockUploadImage[]>([]);
+  const [editingItem, setEditingItem] = useState<JewelleryItem | null>(null);
+  const [editImages, setEditImages] = useState<MockUploadImage[]>([]);
   const [form, setForm] = useState({
     name: "",
-    slug: "",
     sku: "",
     type: "SET",
     shortDescription: "",
     description: "",
-    material: "",
     color: "",
     finish: "",
     stoneDetails: "",
     occasion: "",
     rentalPricePerDay: "",
     securityDeposit: "",
-    originalPrice: "",
+    minimumRentalDays: "1",
+    stockQuantity: "1",
+    categoryId: "",
+  });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    sku: "",
+    type: "SET",
+    shortDescription: "",
+    description: "",
+    color: "",
+    finish: "",
+    stoneDetails: "",
+    occasion: "",
+    rentalPricePerDay: "",
+    securityDeposit: "",
     minimumRentalDays: "1",
     stockQuantity: "1",
     categoryId: "",
@@ -129,19 +151,16 @@ export function JewelleryManager() {
         withAuth: true,
         body: {
           name: form.name,
-          slug: form.slug || undefined,
           sku: form.sku,
           type: form.type,
           shortDescription: form.shortDescription || undefined,
           description: form.description || undefined,
-          material: form.material || undefined,
           color: form.color || undefined,
           finish: form.finish || undefined,
           stoneDetails: form.stoneDetails || undefined,
           occasion: form.occasion || undefined,
           rentalPricePerDay: Number(form.rentalPricePerDay),
           securityDeposit: form.securityDeposit ? Number(form.securityDeposit) : undefined,
-          originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
           minimumRentalDays: Number(form.minimumRentalDays),
           stockQuantity: Number(form.stockQuantity),
           categoryId: form.categoryId || undefined,
@@ -151,19 +170,16 @@ export function JewelleryManager() {
 
       setForm({
         name: "",
-        slug: "",
         sku: "",
         type: "SET",
         shortDescription: "",
         description: "",
-        material: "",
         color: "",
         finish: "",
         stoneDetails: "",
         occasion: "",
         rentalPricePerDay: "",
         securityDeposit: "",
-        originalPrice: "",
         minimumRentalDays: "1",
         stockQuantity: "1",
         categoryId: "",
@@ -189,6 +205,72 @@ export function JewelleryManager() {
     }
   }
 
+  function openEdit(item: JewelleryItem) {
+    setEditingItem(item);
+    setEditImages([]);
+    setEditForm({
+      name: item.name,
+      sku: item.sku,
+      type: item.type,
+      shortDescription: item.shortDescription ?? "",
+      description: item.description ?? "",
+      color: item.color ?? "",
+      finish: item.finish ?? "",
+      stoneDetails: item.stoneDetails ?? "",
+      occasion: item.occasion ?? "",
+      rentalPricePerDay: item.rentalPricePerDay,
+      securityDeposit: item.securityDeposit ?? "",
+      minimumRentalDays: String(item.minimumRentalDays ?? 1),
+      stockQuantity: String(item.stockQuantity ?? 0),
+      categoryId: item.category?.id ?? "",
+    });
+  }
+
+  async function handleEditSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editingItem) {
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const images = editImages.length > 0 ? await buildImagePayload(editImages) : undefined;
+
+      await adminRequest(`/admin/jewellery/${editingItem.id}`, {
+        method: "PATCH",
+        withAuth: true,
+        body: {
+          name: editForm.name,
+          sku: editForm.sku,
+          type: editForm.type,
+          shortDescription: editForm.shortDescription || undefined,
+          description: editForm.description || undefined,
+          color: editForm.color || undefined,
+          finish: editForm.finish || undefined,
+          stoneDetails: editForm.stoneDetails || undefined,
+          occasion: editForm.occasion || undefined,
+          rentalPricePerDay: Number(editForm.rentalPricePerDay),
+          securityDeposit: editForm.securityDeposit ? Number(editForm.securityDeposit) : undefined,
+          minimumRentalDays: Number(editForm.minimumRentalDays),
+          stockQuantity: Number(editForm.stockQuantity),
+          categoryId: editForm.categoryId || undefined,
+          ...(images ? { images } : {}),
+        },
+      });
+
+      setEditingItem(null);
+      setEditImages([]);
+      await loadData();
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : "Failed to update jewellery");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className="admin-grid-two admin-grid-form">
       <section className="admin-panel">
@@ -203,10 +285,6 @@ export function JewelleryManager() {
           <label className="admin-field">
             <span>SKU</span>
             <input value={form.sku} onChange={(e) => setForm((c) => ({ ...c, sku: e.target.value }))} required />
-          </label>
-          <label className="admin-field">
-            <span>Slug</span>
-            <input value={form.slug} onChange={(e) => setForm((c) => ({ ...c, slug: e.target.value }))} />
           </label>
           <label className="admin-field">
             <span>Type</span>
@@ -234,15 +312,6 @@ export function JewelleryManager() {
               min={0}
               value={form.securityDeposit}
               onChange={(e) => setForm((c) => ({ ...c, securityDeposit: e.target.value }))}
-            />
-          </label>
-          <label className="admin-field">
-            <span>Original price</span>
-            <input
-              type="number"
-              min={0}
-              value={form.originalPrice}
-              onChange={(e) => setForm((c) => ({ ...c, originalPrice: e.target.value }))}
             />
           </label>
           <label className="admin-field">
@@ -275,13 +344,6 @@ export function JewelleryManager() {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="admin-field">
-            <span>Material</span>
-            <input
-              value={form.material}
-              onChange={(e) => setForm((c) => ({ ...c, material: e.target.value }))}
-            />
           </label>
           <label className="admin-field admin-field-full">
             <span>Short description</span>
@@ -324,8 +386,9 @@ export function JewelleryManager() {
               key={item.id}
               title={item.name}
               subtitle={`${item.type} · SKU ${item.sku}`}
-              meta={`${item.images.length} image(s)`}
+              meta={`${item.images.length} image(s) · ${item.stockQuantity} in stock`}
               imageUrl={item.images[0]?.imageUrl}
+              onEdit={() => openEdit(item)}
               onDelete={() => handleDelete(item.id)}
             />
           ))}
@@ -334,6 +397,86 @@ export function JewelleryManager() {
           ) : null}
         </div>
       </section>
+
+      {editingItem ? (
+        <div className="admin-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-jewellery-title">
+          <div className="admin-preview-modal">
+            <div className="admin-panel-heading">
+              <div>
+                <span className="admin-eyebrow">Edit jewellery</span>
+                <h3 id="edit-jewellery-title">{editingItem.name}</h3>
+              </div>
+              <button type="button" className="admin-ghost-button" onClick={() => setEditingItem(null)}>
+                Close
+              </button>
+            </div>
+            <form className="admin-form-grid" onSubmit={handleEditSubmit}>
+              <label className="admin-field">
+                <span>Name</span>
+                <input value={editForm.name} onChange={(e) => setEditForm((c) => ({ ...c, name: e.target.value }))} required />
+              </label>
+              <label className="admin-field">
+                <span>SKU</span>
+                <input value={editForm.sku} onChange={(e) => setEditForm((c) => ({ ...c, sku: e.target.value }))} required />
+              </label>
+              <label className="admin-field">
+                <span>Type</span>
+                <select value={editForm.type} onChange={(e) => setEditForm((c) => ({ ...c, type: e.target.value }))}>
+                  {jewelleryTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="admin-field">
+                <span>Rental price per day</span>
+                <input type="number" value={editForm.rentalPricePerDay} onChange={(e) => setEditForm((c) => ({ ...c, rentalPricePerDay: e.target.value }))} required />
+              </label>
+              <label className="admin-field">
+                <span>Security deposit</span>
+                <input type="number" min={0} value={editForm.securityDeposit} onChange={(e) => setEditForm((c) => ({ ...c, securityDeposit: e.target.value }))} />
+              </label>
+              <label className="admin-field">
+                <span>Minimum rental days</span>
+                <input type="number" min={1} value={editForm.minimumRentalDays} onChange={(e) => setEditForm((c) => ({ ...c, minimumRentalDays: e.target.value }))} />
+              </label>
+              <label className="admin-field">
+                <span>Stock quantity</span>
+                <input type="number" min={0} value={editForm.stockQuantity} onChange={(e) => setEditForm((c) => ({ ...c, stockQuantity: e.target.value }))} />
+              </label>
+              <label className="admin-field">
+                <span>Category</span>
+                <select value={editForm.categoryId} onChange={(e) => setEditForm((c) => ({ ...c, categoryId: e.target.value }))}>
+                  <option value="">No category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="admin-field admin-field-full">
+                <span>Short description</span>
+                <input value={editForm.shortDescription} onChange={(e) => setEditForm((c) => ({ ...c, shortDescription: e.target.value }))} />
+              </label>
+              <label className="admin-field admin-field-full">
+                <span>Description</span>
+                <textarea rows={4} value={editForm.description} onChange={(e) => setEditForm((c) => ({ ...c, description: e.target.value }))} />
+              </label>
+              <MockImageDropzone
+                label="Replace jewellery images"
+                hint="Select new images only if you want to replace the current set."
+                value={editImages}
+                onChange={setEditImages}
+              />
+              <button className="admin-primary-button admin-field-full" type="submit" disabled={submitting}>
+                {submitting ? "Saving jewellery..." : "Save changes"}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

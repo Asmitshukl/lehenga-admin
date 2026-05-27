@@ -6,10 +6,11 @@ type CatalogCardProps = {
   meta: string;
   imageUrl?: string;
   onView?: () => void;
+  onEdit?: () => void;
   onDelete: () => void;
 };
 
-export function CatalogCard({ title, subtitle, meta, imageUrl, onView, onDelete }: CatalogCardProps) {
+export function CatalogCard({ title, subtitle, meta, imageUrl, onView, onEdit, onDelete }: CatalogCardProps) {
   return (
     <article className="admin-catalog-card">
       <div className="admin-catalog-card-media">
@@ -31,6 +32,11 @@ export function CatalogCard({ title, subtitle, meta, imageUrl, onView, onDelete 
         {onView ? (
           <button type="button" className="admin-secondary-button" onClick={onView}>
             View
+          </button>
+        ) : null}
+        {onEdit ? (
+          <button type="button" className="admin-secondary-button" onClick={onEdit}>
+            Edit
           </button>
         ) : null}
         <button type="button" className="admin-danger-button" onClick={onDelete}>

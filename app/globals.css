@@ -417,6 +417,27 @@ img {
   grid-column: 1 / -1;
 }
 
+.admin-order-measurements {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-order-measurement-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-order-measurement-list span {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--admin-border);
+  padding: 8px 12px;
+  color: var(--admin-text);
+  font-size: 13px;
+}
+
 .admin-order-actions,
 .admin-customer-card-actions {
   display: flex;
